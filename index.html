@@ -97,9 +97,9 @@ const SEED=[
 {n:'Paket Iftar (Ramadan)',k:'Paket',p:55000,img:'img/paket-iftar.jpg',e:'🌙',ok:false}];
 const DEF={cafe:'Badjoeri Coffee and Eatery',bank:'BCA',rek:'0000000000',an:'Nama Pemilik',qr:'',pinAdmin:'',pinKasir:''};
 const S={menu:[],orders:[],cfg:{...DEF}},V={page:'home',cat:'Semua',cart:{},nama:'',meja:'',bukti:'',lock:false,role:null,tab:'orders',edit:null,mode:'lokal'};
-const API_URL='PASTE_URL_WEB_APP_APPS_SCRIPT_DI_SINI';
+const API_URL='https://script.google.com/macros/s/AKfycbw02D5UicBv2YDyzQe9nqF2eSrfUOK36jBRFjOo24J_LvZLdYwH37j-jjLg9kO8BAUMUA/exec';
 let store,lastSnap='';
-async function api(action,data){const r=await fetch(API_URL,{method:'POST',body:JSON.stringify({action,token:V.token||'',...data})});return r.json()}
+async function api(action,data){try{const r=await fetch(API_URL,{method:'POST',redirect:'follow',body:JSON.stringify({action,token:V.token||'',...data})});const t=await r.text();try{return JSON.parse(t)}catch(e){return{ok:false,error:'Server tidak membalas dengan benar. Cek deploy Apps Script: Who has access harus Anyone.'}}}catch(e){return{ok:false,error:'Tidak bisa terhubung ke server Apps Script ('+e.message+').'}}}
 function fb(){if(!S.menu.length)S.menu=SEED.map((x,i)=>({id:'d'+i,ok:true,...x}))}
 function note(msg){S.srv=msg;fb();const sn=JSON.stringify([S.menu,S.srv]);if(sn!==lastSnap){lastSnap=sn;draw()}}
 async function poll(){
@@ -108,7 +108,7 @@ async function poll(){
     const p=await (await fetch(API_URL+'?action=public')).json();
     if(p.ok){S.menu=(p.menu||[]).sort((a,b)=>(a.k||'').localeCompare(b.k||'')||a.n.localeCompare(b.n));S.cfg={...DEF,...p.config}}
     S.srv=p.ok?(S.menu.length?'':'Menu di Google Sheet masih kosong. Jalankan fungsi setup di Apps Script.'):('Server: '+(p.error||'error'));fb();
-    if(V.token){const o=await api('orders');if(o.ok)S.orders=o.orders;else{V.token=null;V.role=null}}
+    if(V.token){const o=await api('orders');if(o.ok)S.orders=o.orders;else if(/login/i.test(o.error||'')){V.token=null;V.role=null}}
     else{const ids=mine().slice(-20);if(ids.length){const o=await api('myOrders',{ids});if(o.ok)S.orders=o.orders}}
     const snap=JSON.stringify([S.menu,S.cfg,S.orders,V.role,S.srv]);
     if(snap!==lastSnap){lastSnap=snap;draw()}
@@ -217,7 +217,7 @@ document.addEventListener('click',async e=>{
     if(!V.bukti)return alert('Upload bukti pembayaran dulu.');
     const id='o'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
     const o={nama:V.nama.trim(),meja:V.meja.trim(),items:cartItems().map(x=>({id:x.m.id,n:x.m.n,p:x.m.p,q:x.q})),total:total(),note:(val('note')||'').trim(),bukti:V.bukti,status:'verif',t:Date.now()};
-    try{await store.put('orders',id,o)}catch(err){return alert('Gagal mengirim pesanan, coba lagi.')}
+    try{await store.put('orders',id,o)}catch(err){return}
     try{localStorage.setItem('cafe:mine',JSON.stringify([...mine(),id]))}catch(_){}
     V.last=id;V.page='track';V.lock=false;V.cart={};V.bukti='';
   }
